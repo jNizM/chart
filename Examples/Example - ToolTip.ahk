@@ -4,9 +4,7 @@
 SetBatchLines -1
 
 #Include %a_lineFile%/../../chart.ahk
-#Include %a_lineFile%/../../gdip_all.ahk
 
-OnExit(Func("Gdip_Shutdown").bind(Gdip_Startup()))
 
 Gui Add, Pic, xm w600 h300 0xE Hwndhwnd
 chart := chart(hwnd, "Line").title("Chart").labels("Item 1,Item 2")

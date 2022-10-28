@@ -5,9 +5,7 @@ SetBatchLines -1
 
 #Include *i <init>
 #Include %a_lineFile%/../../chart.ahk
-#Include %a_lineFile%/../../gdip_all.ahk
 
-OnExit(Func("Gdip_Shutdown").bind(Gdip_Startup()))
 
 Gui Margin, 10, 6
 Gui Font,, Segoe UI

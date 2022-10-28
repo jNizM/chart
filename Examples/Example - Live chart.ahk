@@ -4,9 +4,7 @@
 SetBatchLines -1
 
 #Include %a_lineFile%/../../chart.ahk
-#Include %a_lineFile%/../../gdip_all.ahk
 
-OnExit(Func("Gdip_Shutdown").bind(Gdip_Startup()))
 
 ; https://www.autohotkey.com/boards/viewtopic.php?p=470991#p470991
 Gui +E0x2080000 ; doublebuffering
