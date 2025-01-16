@@ -24,6 +24,7 @@ class Charter extends Charter.Box {
 		Bubble: Charter.Bubble
 		Pie: Charter.Pie
 		Doughnut: Charter.Doughnut
+		Candlestick: Charter.Candlestick
 	)}
 
 	static themes := {
@@ -169,8 +170,6 @@ class Charter extends Charter.Box {
 
 		DllCall("gdiplus\GdipCreateBitmapFromScan0", "Int", this.width, "Int", this.height, "Int", 0, "Int", 0x26200A, "UPtr", 0, "UPtr*", pbm)
 		DllCall("gdiplus\GdipGetImageGraphicsContext", "UPtr", pbm, "UPtr*", pg)
-		DllCall("gdiplus\GdipSetSmoothingMode", "UPtr", pg, "Int", 4)
-		DllCall("gdiplus\GdipSetTextRenderingHint", "UPtr", pg, "Int", 4)
 
 		this.render(pg)
 
@@ -500,9 +499,9 @@ class Charter extends Charter.Box {
 				DllCall("gdiplus\GdipCreateSolidFill", "UInt", this.argb(dataset.color), "UPtr*", brush)
 				for i, v in dataset.data {
 					x := Min(this.max.x, Max(this.min.x, v[xKey*]))
-					yval := Min(this.max.y, Max(this.min.y, v[yKey*]))
+					y := Min(this.max.y, Max(this.min.y, v[yKey*]))
 					x := rect.x + rect.width * (x - this.min.x) / this.range.x
-					y := rect.y + rect.height * (yval - this.min.y) / this.range.y
+					y := rect.y + rect.height - rect.height * (y - this.min.y) / this.range.y
 					DllCall("gdiplus\GdipFillEllipse", "UPtr", g, "UPtr", brush, "Float", x - radius, "Float", y - radius, "Float", radius * 2, "Float", radius * 2)
 				}
 				DllCall("gdiplus\GdipDeleteBrush", "UPtr", brush)
@@ -692,7 +691,49 @@ class Charter extends Charter.Box {
 		isDoughnut := true
 	}
 
-		class ChartRenderer extends Charter.Box {
+	class Candlestick extends Charter.ChartRenderer {
+
+		drawChart(g) {
+			chart := this.parent
+			rect := this.contentRect
+			barW := chart.bar.width
+			if (barW == "")
+				barW := 0.6
+
+			DllCall("gdiplus\GdipCreateSolidFill", "UInt", 0xFF000000, "UPtr*", brStick)
+			DllCall("gdiplus\GdipCreateSolidFill", "UInt", this.argb(0x23B24C), "UPtr*", brBullish)
+			DllCall("gdiplus\GdipCreateSolidFill", "UInt", this.argb(0xEE1B24), "UPtr*", brBearish)
+			for i, dataset in chart.datasets {
+				if (dataset.yKey != "")
+					keys := StrSplit(dataset.yKey, ".")
+
+				size := this.isHorizontal ? rect.height / this.count : rect.width / this.count
+				margin := barW < 1 ? size * (0.5 - barW / 2) : (size - barW * chart.datasets.count()) / 2
+				x := y := 0
+				w := h := Min((size - margin * 2) / chart.datasets.count(), 30)
+				stickW := 1
+				offset := margin + w * (A_Index - 1)
+				for i, v in dataset.data {
+					x := offset + size * (A_Index - 1)
+					h := (Abs(v[3] - v[4]) - this.min.y) / this.range.y * rect.height
+					y := rect.height - rect.height * (Max(v[3], v[4]) - this.min.y) / this.range.y
+					DllCall("gdiplus\GdipFillRectangle", "UPtr", g, "UPtr", brStick, "Float", rect.x + x + w / 2 - stickW / 2, "Float", rect.y + y, "Float", stickW, "Float", h)
+					chart.elements.push({x: rect.x + x, y: rect.y + y, width: w, height: h, value: v})
+
+					h := (Abs(v[1] - v[2]) - this.min.y) / this.range.y * rect.height
+					y := rect.height - rect.height * ((Max(v[1], v[2]) - this.min.y) / this.range.y)
+					DllCall("gdiplus\GdipFillRectangle", "UPtr", g, "UPtr", v[1] < v[2] ? brBullish : brBearish, "Float", rect.x + x, "Float", rect.y + y, "Float", w, "Float", h)
+					if (a_index == this.count)
+						break
+				}
+			}
+			DllCall("gdiplus\GdipDeleteBrush", "UPtr", brStick)
+			DllCall("gdiplus\GdipDeleteBrush", "UPtr", brBullish)
+			DllCall("gdiplus\GdipDeleteBrush", "UPtr", brBearish)
+		}
+	}
+
+	class ChartRenderer extends Charter.Box {
 
 		render(g) {
 			this.prepare()
@@ -706,9 +747,13 @@ class Charter extends Charter.Box {
 			this.borderRight := chart.borderRight
 			this.borderBottom := chart.borderBottom
 
+			DllCall("gdiplus\GdipSetSmoothingMode", "UPtr", g, "int", 0)
 			DllCall("gdiplus\GdipCreateSolidFill", "UInt", this.argb(chart.backgroundColor), "UPtr*", brush)
 			DllCall("gdiplus\GdipFillRectangle", "UPtr", g, "UPtr", brush, "Float", chart.x, "Float", chart.y, "Float", chart.width, "Float", chart.height)
 			DllCall("gdiplus\GdipDeleteBrush", "UPtr", brush)
+
+			DllCall("gdiplus\GdipSetSmoothingMode", "UPtr", g, "int", 4)
+			DllCall("gdiplus\GdipSetTextRenderingHint", "UPtr", g, "int", 4)
 
 			if (chart.title.text != "")
 				title := chart.title
